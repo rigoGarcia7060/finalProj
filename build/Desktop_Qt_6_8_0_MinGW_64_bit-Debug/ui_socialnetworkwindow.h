@@ -39,6 +39,7 @@ public:
     QPushButton *addFriendButton;
     QLabel *pictureLabel;
     QPushButton *changePictureButton;
+    QPushButton *themeToggleButton;
     QMenuBar *menubar;
     QStatusBar *statusbar;
 
@@ -47,36 +48,42 @@ public:
         if (SocialNetworkWindow->objectName().isEmpty())
             SocialNetworkWindow->setObjectName("SocialNetworkWindow");
         SocialNetworkWindow->resize(800, 600);
+        SocialNetworkWindow->setUnifiedTitleAndToolBarOnMac(false);
         centralwidget = new QWidget(SocialNetworkWindow);
         centralwidget->setObjectName("centralwidget");
         promptLabel = new QLabel(centralwidget);
         promptLabel->setObjectName("promptLabel");
-        promptLabel->setGeometry(QRect(220, 110, 361, 41));
+        promptLabel->setGeometry(QRect(260, 160, 361, 41));
         loginButton = new QPushButton(centralwidget);
         loginButton->setObjectName("loginButton");
-        loginButton->setGeometry(QRect(310, 190, 100, 32));
+        loginButton->setGeometry(QRect(350, 240, 100, 32));
         textEdit = new QTextEdit(centralwidget);
         textEdit->setObjectName("textEdit");
-        textEdit->setGeometry(QRect(260, 150, 201, 31));
+        textEdit->setGeometry(QRect(300, 200, 201, 31));
         errorLabel = new QLabel(centralwidget);
         errorLabel->setObjectName("errorLabel");
-        errorLabel->setGeometry(QRect(220, 110, 301, 41));
+        errorLabel->setGeometry(QRect(270, 160, 301, 41));
         profileNameLabel = new QLabel(centralwidget);
         profileNameLabel->setObjectName("profileNameLabel");
         profileNameLabel->setGeometry(QRect(50, 20, 141, 16));
         friendsTable = new QTableWidget(centralwidget);
         friendsTable->setObjectName("friendsTable");
-        friendsTable->setGeometry(QRect(600, 60, 181, 341));
+        friendsTable->setGeometry(QRect(600, 50, 181, 341));
         friendsTable->horizontalHeader()->setCascadingSectionResizes(false);
+        friendsTable->horizontalHeader()->setStretchLastSection(true);
+        friendsTable->verticalHeader()->setVisible(true);
+        friendsTable->verticalHeader()->setStretchLastSection(false);
         postsLabel = new QLabel(centralwidget);
         postsLabel->setObjectName("postsLabel");
-        postsLabel->setGeometry(QRect(40, 210, 541, 341));
+        postsLabel->setGeometry(QRect(40, 210, 541, 291));
+        postsLabel->setAlignment(Qt::AlignmentFlag::AlignJustify|Qt::AlignmentFlag::AlignTop);
         returnButton = new QPushButton(centralwidget);
         returnButton->setObjectName("returnButton");
-        returnButton->setGeometry(QRect(610, 20, 161, 32));
+        returnButton->setGeometry(QRect(610, 10, 161, 32));
         friendSuggestions = new QTableWidget(centralwidget);
         friendSuggestions->setObjectName("friendSuggestions");
-        friendSuggestions->setGeometry(QRect(600, 410, 181, 141));
+        friendSuggestions->setGeometry(QRect(600, 400, 181, 151));
+        friendSuggestions->horizontalHeader()->setStretchLastSection(true);
         addFriendButton = new QPushButton(centralwidget);
         addFriendButton->setObjectName("addFriendButton");
         addFriendButton->setGeometry(QRect(200, 10, 100, 32));
@@ -86,6 +93,9 @@ public:
         changePictureButton = new QPushButton(centralwidget);
         changePictureButton->setObjectName("changePictureButton");
         changePictureButton->setGeometry(QRect(50, 160, 101, 24));
+        themeToggleButton = new QPushButton(centralwidget);
+        themeToggleButton->setObjectName("themeToggleButton");
+        themeToggleButton->setGeometry(QRect(20, 520, 181, 31));
         SocialNetworkWindow->setCentralWidget(centralwidget);
         menubar = new QMenuBar(SocialNetworkWindow);
         menubar->setObjectName("menubar");
@@ -105,13 +115,14 @@ public:
         SocialNetworkWindow->setWindowTitle(QCoreApplication::translate("SocialNetworkWindow", "SocialNetworkWindow", nullptr));
         promptLabel->setText(QCoreApplication::translate("SocialNetworkWindow", "Please enter your first and last name to login below:", nullptr));
         loginButton->setText(QCoreApplication::translate("SocialNetworkWindow", "Login", nullptr));
-        errorLabel->setText(QCoreApplication::translate("SocialNetworkWindow", "Sorry we cannot find youre user. Please try again", nullptr));
+        errorLabel->setText(QCoreApplication::translate("SocialNetworkWindow", "Sorry, we cannot find your user. Please try again", nullptr));
         profileNameLabel->setText(QCoreApplication::translate("SocialNetworkWindow", "TextLabel", nullptr));
         postsLabel->setText(QCoreApplication::translate("SocialNetworkWindow", "TextLabel", nullptr));
         returnButton->setText(QCoreApplication::translate("SocialNetworkWindow", "Return to Profile", nullptr));
         addFriendButton->setText(QCoreApplication::translate("SocialNetworkWindow", "Add Friend", nullptr));
         pictureLabel->setText(QCoreApplication::translate("SocialNetworkWindow", "TextLabel", nullptr));
         changePictureButton->setText(QCoreApplication::translate("SocialNetworkWindow", "Change Picture", nullptr));
+        themeToggleButton->setText(QCoreApplication::translate("SocialNetworkWindow", "Change Theme", nullptr));
     } // retranslateUi
 
 };

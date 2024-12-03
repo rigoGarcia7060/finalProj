@@ -2,13 +2,19 @@
 #include "ui_socialnetworkwindow.h"
 #include "network.h"
 #include <QFileDialog>
+#include <QFile>
 
 SocialNetworkWindow::SocialNetworkWindow(QWidget *parent)
     : QMainWindow(parent)
     , ui(new Ui::SocialNetworkWindow)
+    , isDarkTheme(true) // Default to dark theme
 {
-    // Set up the UI and hide elements initially
     ui->setupUi(this);
+
+    // Apply default theme
+    setTheme(":/dark_theme.qss");
+
+    // Set up UI and hide elements initially
     ui->errorLabel->hide();
     ui->friendsTable->hide();
     ui->postsLabel->hide();
@@ -19,7 +25,10 @@ SocialNetworkWindow::SocialNetworkWindow(QWidget *parent)
     ui->pictureLabel->hide();
     ui->changePictureButton->hide();
 
-    // Connect UI buttons and widgets to respective slots
+    // Connect the toggle button to the toggleTheme slot
+    connect(ui->themeToggleButton, &QPushButton::clicked, this, &SocialNetworkWindow::toggleTheme);
+
+    // Other existing connections
     connect(ui->loginButton, &QPushButton::clicked, this, &SocialNetworkWindow::onLoginClicked);
     connect(ui->friendsTable, &QTableWidget::itemClicked, this, &SocialNetworkWindow::onFriendClicked);
     connect(ui->friendSuggestions, &QTableWidget::itemClicked, this, &SocialNetworkWindow::onSuggestionClicked);
@@ -142,26 +151,31 @@ void SocialNetworkWindow::saveUserChanges() {
 }
 
 void SocialNetworkWindow::showFriends(QString username){
-    //get how mnay friends user has and set that to the size of the table
+    // Get how many friends user has and set that to the size of the table
     int userId = socialNetwork.getId(username.toStdString());
-    ui->friendsTable->setRowCount(socialNetwork.getUser(userId)->getFriends().size());
+    auto friends = socialNetwork.getUser(userId)->getFriends();
+
+    ui->friendsTable->setRowCount(friends.size());
     ui->friendsTable->setColumnCount(1);
 
+    // Set header for the table
+    ui->friendsTable->setHorizontalHeaderLabels(QStringList() << "Friends");
 
-    //loop to populate the table with friend names
+    // Loop to populate the table with friend names
     int row = 0;
-    for(int currFriend: socialNetwork.getUser(userId)->getFriends()){
-        //get the name of friend from their ID
+    for (int currFriend: friends) {
+        // Get the name of the friend from their ID
         QString friendName = QString::fromStdString(socialNetwork.getUser(currFriend)->getName());
-        //create and set the name of the item for the table
+        // Create and set the name of the item for the table
         QTableWidgetItem *item = new QTableWidgetItem(friendName);
         item->setData(Qt::UserRole, currFriend);
         ui->friendsTable->setItem(row, 0, item);
-
         row++;
     }
+
     ui->friendsTable->show();
 }
+
 void SocialNetworkWindow::showPosts(QString username){
     int id = socialNetwork.getId(username.toStdString());
 
@@ -187,24 +201,28 @@ void SocialNetworkWindow::onFriendClicked(QTableWidgetItem *item) {
     showProfile(friendName);
 }
 
-void SocialNetworkWindow::showFriendSuggestions(QString username){
+void SocialNetworkWindow::showFriendSuggestions(QString username) {
     int closeness = 10;
     int user = socialNetwork.getId(username.toStdString());
     std::vector<int> suggestions = socialNetwork.suggestFriends(user, closeness);
 
-    //set the dimentions of friendSuggestions
+    // Set the dimensions of friendSuggestions
     ui->friendSuggestions->setColumnCount(1);
     ui->friendSuggestions->setRowCount(suggestions.size());
 
-    //add each suggestion to the tabel 'friendSuggestions'
+    // Set header for the table
+    ui->friendSuggestions->setHorizontalHeaderLabels(QStringList() << "Suggested Friends");
+
+    // Add each suggestion to the table
     int row = 0;
-    for(auto suggestionId: suggestions){
+    for (auto suggestionId : suggestions) {
         QString friendName = QString::fromStdString(socialNetwork.getUser(suggestionId)->getName());
         QTableWidgetItem* item = new QTableWidgetItem(friendName);
         item->setData(Qt::UserRole, suggestionId);
-        ui->friendSuggestions->setItem(row, 0, item); ///
+        ui->friendSuggestions->setItem(row, 0, item);
         row++;
     }
+
     ui->friendSuggestions->show();
 }
 
@@ -239,6 +257,29 @@ void SocialNetworkWindow::onAddFriendButtonClicked() {
 
     //refreshing friends list in case it's needed
     showFriends(ui->profileNameLabel->text());
+}
+
+void SocialNetworkWindow::toggleTheme() {
+    if (isDarkTheme) {
+        setTheme(":/light_theme.qss"); // Load light theme
+        ui->themeToggleButton->setText("Switch to Dark Mode");
+    } else {
+        setTheme(":/dark_theme.qss"); // Load dark theme
+        ui->themeToggleButton->setText("Switch to Light Mode");
+    }
+    isDarkTheme = !isDarkTheme; // Toggle the theme state
+}
+
+void SocialNetworkWindow::setTheme(const QString &themePath) {
+    QFile themeFile(themePath);
+    if (themeFile.open(QFile::ReadOnly)) {
+        QString styleSheet = QLatin1String(themeFile.readAll());
+        qApp->setStyleSheet(styleSheet);
+        themeFile.close();
+        qDebug() << "Applied theme:" << themePath;
+    } else {
+        qDebug() << "Failed to load theme:" << themePath;
+    }
 }
 
 void SocialNetworkWindow::saveFriendChanges(){

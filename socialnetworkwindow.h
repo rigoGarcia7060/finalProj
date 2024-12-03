@@ -37,6 +37,9 @@ private:
     void showProfilePicture(QString);
     void onChangePictureButtonClicked();
     void saveUserChanges();
+    void setTheme(const QString &themePath);
+    bool isDarkTheme;
+    void toggleTheme();
 };
 
 #endif // SOCIALNETWORKWINDOW_H
