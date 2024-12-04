@@ -158,6 +158,7 @@ void SocialNetworkWindow::onLoginClicked() {
         ui->promptLabel->hide();
        // ui->changePictureButton->hide();
     }
+}
 
 void SocialNetworkWindow::showProfilePicture(QString username) {
     int userId = socialNetwork.getId(username.toStdString());
