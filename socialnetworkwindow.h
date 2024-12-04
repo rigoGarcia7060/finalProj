@@ -40,6 +40,7 @@ private:
     void setTheme(const QString &themePath);
     bool isDarkTheme;
     void toggleTheme();
+    void onSearchTextChanged(const QString&);
 };
 
 #endif // SOCIALNETWORKWINDOW_H

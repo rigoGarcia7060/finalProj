@@ -7,14 +7,14 @@
 SocialNetworkWindow::SocialNetworkWindow(QWidget *parent)
     : QMainWindow(parent)
     , ui(new Ui::SocialNetworkWindow)
-    , isDarkTheme(true) // Default to dark theme
+    , isDarkTheme(true) //default to dark theme
 {
     ui->setupUi(this);
 
-    // Apply default theme
+    //default theme
     setTheme(":/dark_theme.qss");
 
-    // Set up UI and hide elements initially
+    //hide everthing because of login page
     ui->errorLabel->hide();
     ui->friendsTable->hide();
     ui->postsLabel->hide();
@@ -24,11 +24,14 @@ SocialNetworkWindow::SocialNetworkWindow(QWidget *parent)
     ui->addFriendButton->hide();
     ui->pictureLabel->hide();
     ui->changePictureButton->hide();
+    ui->friendSearchBar->hide();
+    ui->themeToggleButton->hide();
 
-    // Connect the toggle button to the toggleTheme slot
-    connect(ui->themeToggleButton, &QPushButton::clicked, this, &SocialNetworkWindow::toggleTheme);
+    //hidden atm but set placeholder text
+    ui->friendSearchBar->setPlaceholderText("Search For Friend:");
 
-    // Other existing connections
+    //connections
+    connect(ui->friendSearchBar, &QLineEdit::textChanged, this, &SocialNetworkWindow::onSearchTextChanged);
     connect(ui->loginButton, &QPushButton::clicked, this, &SocialNetworkWindow::onLoginClicked);
     connect(ui->friendsTable, &QTableWidget::itemClicked, this, &SocialNetworkWindow::onFriendClicked);
     connect(ui->friendSuggestions, &QTableWidget::itemClicked, this, &SocialNetworkWindow::onSuggestionClicked);
@@ -37,12 +40,15 @@ SocialNetworkWindow::SocialNetworkWindow(QWidget *parent)
         showProfile(origName);
     });
     connect(ui->changePictureButton, &QPushButton::clicked, this, &SocialNetworkWindow::onChangePictureButtonClicked);
+    connect(ui->themeToggleButton, &QPushButton::clicked, this, &SocialNetworkWindow::toggleTheme);
 
-    // Load user and post data from files
+
+    //load user/post data
+    //files must be in running directory
     socialNetwork.readUsers("users.txt");
     socialNetwork.readPosts("posts.txt");
 
-    // Enable word wrapping for posts
+    //word wrapping for posts
     ui->postsLabel->setWordWrap(true);
 }
 
@@ -50,130 +56,169 @@ SocialNetworkWindow::~SocialNetworkWindow()
 {
     delete ui;
 }
-
-void SocialNetworkWindow::onLoginClicked() {
-    QString username = ui->textEdit->toPlainText();
-    int userId = socialNetwork.getId(username.toStdString());
-
-    if (userId != -1) {
-        // Hide login elements
-        ui->loginButton->hide();
-        ui->promptLabel->hide();
-        ui->textEdit->hide();
-        ui->errorLabel->hide();
-
-        // Proceed to the logged-in user's profile
-        origName = username;
-        showProfile(origName);
-    } else {
-        // Show error and prompt to try again
-        ui->errorLabel->show();
-        ui->promptLabel->hide();
-        ui->changePictureButton->hide(); // Ensure button is hidden
-    }
-}
-
 void SocialNetworkWindow::showProfile(QString name) {
+    ui->themeToggleButton->show(); //should always show once logged in
+
     if (name == origName) {
         ui->profileNameLabel->setText("My Profile");
         ui->profileNameLabel->show();
+        ui->returnButton->hide();
+        ui->changePictureButton->show();
+        ui->friendSearchBar->show();
+        ui->friendSuggestions->show();
+
+        //only while on others profile
         ui->addFriendButton->hide();
         ui->returnButton->hide();
-        ui->changePictureButton->show(); // Show button for logged-in user
-    } else {
+    }
+    else {
         ui->profileNameLabel->setText(name);
         ui->profileNameLabel->show();
         ui->addFriendButton->show();
         ui->returnButton->show();
-        ui->changePictureButton->hide(); // Hide button for other profiles
+        ui->returnButton->show();
+
+        // hidden while on others profiles
+        ui->changePictureButton->hide();
+        ui->friendSuggestions->hide();
     }
 
+    //refreshing information displayed
     showFriends(name);
     showPosts(name);
     showFriendSuggestions(name);
     showProfilePicture(name);
-
+    /*
     if (name != origName) {
         ui->returnButton->show();
     } else {
         ui->returnButton->hide();
     }
+    */
 }
+void SocialNetworkWindow::onSearchTextChanged(const QString& searchText) {//could add a second parameter for name
+    //whos profile are we on
+    QString currentProfile = ui->profileNameLabel->text();
+    int userId;
+
+    // if "My Profile" is displayed use the logged-in user
+    if (currentProfile == "My Profile") { //could also use origName global variable
+        userId = socialNetwork.getId(origName.toStdString());
+    } else {
+        userId = socialNetwork.getId(currentProfile.toStdString());
+    }
+
+    auto friends = socialNetwork.getUser(userId)->getFriends();
+
+    //clear table
+    ui->friendsTable->clearContents();
+    ui->friendsTable->setRowCount(0);
+
+    //while search bar is empty display all friends of curr user
+    if (searchText.trimmed().isEmpty()) {
+        showFriends(currentProfile);
+        return;
+    }
+
+    //filter friends list by the search term
+    int row = 0;
+    for (int friendId : friends) {
+        User* friendUser = socialNetwork.getUser(friendId);
+        if (friendUser != nullptr && QString::fromStdString(friendUser->getName()).contains(searchText, Qt::CaseInsensitive)) {
+            ui->friendsTable->insertRow(row);
+            QTableWidgetItem* item = new QTableWidgetItem(QString::fromStdString(friendUser->getName()));
+            item->setData(Qt::UserRole, friendId);
+            ui->friendsTable->setItem(row, 0, item);
+            row++;
+        }
+    }
+
+    //no match, display empty list
+    if (row == 0) {
+        ui->friendsTable->setRowCount(0);
+    }
+}
+
+void SocialNetworkWindow::onLoginClicked() {
+    QString username = ui->textEdit->toPlainText();
+    int userId = socialNetwork.getId(username.toStdString());
+
+    if (userId != -1) { //user within system
+        ui->loginButton->hide();
+        ui->promptLabel->hide();
+        ui->textEdit->hide();
+        ui->errorLabel->hide();
+
+        //set global variable and proceed to his profile
+        origName = username;
+        showProfile(origName);
+    } else { //not in network
+        //show error message
+        ui->errorLabel->show();
+        ui->promptLabel->hide();
+       // ui->changePictureButton->hide();
+    }
 
 void SocialNetworkWindow::showProfilePicture(QString username) {
     int userId = socialNetwork.getId(username.toStdString());
     User* user = socialNetwork.getUser(userId);
 
-    if (user != nullptr) {
+    if (user != nullptr) {//user is in network
         QPixmap profilePicture = user->getProfilePicture();
         if (!profilePicture.isNull()) {
             ui->pictureLabel->setPixmap(profilePicture.scaled(100, 100, Qt::KeepAspectRatio, Qt::SmoothTransformation));
-            ui->pictureLabel->repaint(); // Force immediate update
-            qDebug() << "Displayed profile picture for:" << username;
-        } else {
-            qDebug() << "Profile picture is null for:" << username;
+            ui->pictureLabel->repaint();
         }
         ui->pictureLabel->show();
-    } else {
-        qDebug() << "User not found: " << username;
     }
 }
 
 void SocialNetworkWindow::onChangePictureButtonClicked() {
-    // Open a file dialog to select a new profile picture
+    //open file dialog to select a new profile picture
     QString fileName = QFileDialog::getOpenFileName(this, tr("Select Profile Picture"), "", tr("Image Files (*.png *.jpg *.jpeg *.bmp)"));
 
     if (!fileName.isEmpty()) {
-        qDebug() << "Selected File Path: " << fileName;  // Debugging output
+        qDebug() << "Selected File Path: " << fileName; //debugging
         int userId = socialNetwork.getId(origName.toStdString());
         User* user = socialNetwork.getUser(userId);
 
+        //user is in network
         if (user != nullptr) {
-            // Update the profile picture path
-            user->setProfilePicturePath(fileName.toStdString());
-
-            // Set the profile picture dynamically
-            user->setProfilePicture();
-
-            // Refresh the displayed profile picture
-            showProfilePicture(origName);
-
-            // Save changes to persist data
-            saveUserChanges();
-
-            qDebug() << "Updated and displayed new profile picture for user: " << origName;
+            user->setProfilePicturePath(fileName.toStdString()); //update users path
+            user->setProfilePicture(); //set the path
+            showProfilePicture(origName); //refresh
+            saveUserChanges(); //save changes / rewrite users.txt file
+            //qDebug() << "Updated and displayed new profile picture for user: " << origName;
         }
     }
 }
-
+//save changes made to user(s) by rewritting all the users properties on .txt file
 void SocialNetworkWindow::saveUserChanges() {
     socialNetwork.writeUsers("users.txt");
 }
 
-void SocialNetworkWindow::showFriends(QString username){
-    // Get how many friends user has and set that to the size of the table
+void SocialNetworkWindow::showFriends(QString username) {
     int userId = socialNetwork.getId(username.toStdString());
     auto friends = socialNetwork.getUser(userId)->getFriends();
 
+    //set up the table horizontally
+    ui->friendsTable->clearContents();
     ui->friendsTable->setRowCount(friends.size());
     ui->friendsTable->setColumnCount(1);
-
-    // Set header for the table
     ui->friendsTable->setHorizontalHeaderLabels(QStringList() << "Friends");
 
-    // Loop to populate the table with friend names
+    //populate it
     int row = 0;
-    for (int currFriend: friends) {
-        // Get the name of the friend from their ID
-        QString friendName = QString::fromStdString(socialNetwork.getUser(currFriend)->getName());
-        // Create and set the name of the item for the table
-        QTableWidgetItem *item = new QTableWidgetItem(friendName);
-        item->setData(Qt::UserRole, currFriend);
-        ui->friendsTable->setItem(row, 0, item);
-        row++;
+    for (int friendId : friends) {
+        User* friendUser = socialNetwork.getUser(friendId);
+        if (friendUser) {
+            QTableWidgetItem* item = new QTableWidgetItem(QString::fromStdString(friendUser->getName()));
+            item->setData(Qt::UserRole, friendId);
+            ui->friendsTable->setItem(row, 0, item);
+            row++;
+        }
     }
-
-    ui->friendsTable->show();
+    ui->friendsTable->show(); //showing for everyone
 }
 
 void SocialNetworkWindow::showPosts(QString username){
@@ -191,13 +236,13 @@ void SocialNetworkWindow::showPosts(QString username){
 
 }
 void SocialNetworkWindow::onFriendClicked(QTableWidgetItem *item) {
-    // Retrieve the friend's ID from the item’s data
+    //get ID of friend clicked
     int friendId = item->data(Qt::UserRole).toInt();
 
-    // Retrieve the friend's name using the friend ID
+    //use ID to get name of friend clicked
     QString friendName = QString::fromStdString(socialNetwork.getUser(friendId)->getName());
 
-    // Display the friend's profile
+    //display
     showProfile(friendName);
 }
 
@@ -206,14 +251,13 @@ void SocialNetworkWindow::showFriendSuggestions(QString username) {
     int user = socialNetwork.getId(username.toStdString());
     std::vector<int> suggestions = socialNetwork.suggestFriends(user, closeness);
 
-    // Set the dimensions of friendSuggestions
+    //set up friendSuggestions horizontally as well
     ui->friendSuggestions->setColumnCount(1);
     ui->friendSuggestions->setRowCount(suggestions.size());
 
-    // Set header for the table
-    ui->friendSuggestions->setHorizontalHeaderLabels(QStringList() << "Suggested Friends");
+    ui->friendSuggestions->setHorizontalHeaderLabels(QStringList() << "Suggested Friends"); //header
 
-    // Add each suggestion to the table
+    //populate
     int row = 0;
     for (auto suggestionId : suggestions) {
         QString friendName = QString::fromStdString(socialNetwork.getUser(suggestionId)->getName());
@@ -223,7 +267,7 @@ void SocialNetworkWindow::showFriendSuggestions(QString username) {
         row++;
     }
 
-    ui->friendSuggestions->show();
+    //ui->friendSuggestions->show();
 }
 
 void SocialNetworkWindow::onSuggestionClicked(QTableWidgetItem *item) {
@@ -260,14 +304,14 @@ void SocialNetworkWindow::onAddFriendButtonClicked() {
 }
 
 void SocialNetworkWindow::toggleTheme() {
-    if (isDarkTheme) {
-        setTheme(":/light_theme.qss"); // Load light theme
+    if (isDarkTheme) { //change to light theme
+        setTheme(":/light_theme.qss");
         ui->themeToggleButton->setText("Switch to Dark Mode");
-    } else {
-        setTheme(":/dark_theme.qss"); // Load dark theme
+    } else { //change to dark theme
+        setTheme(":/dark_theme.qss");
         ui->themeToggleButton->setText("Switch to Light Mode");
     }
-    isDarkTheme = !isDarkTheme; // Toggle the theme state
+    isDarkTheme = !isDarkTheme;
 }
 
 void SocialNetworkWindow::setTheme(const QString &themePath) {
@@ -276,9 +320,9 @@ void SocialNetworkWindow::setTheme(const QString &themePath) {
         QString styleSheet = QLatin1String(themeFile.readAll());
         qApp->setStyleSheet(styleSheet);
         themeFile.close();
-        qDebug() << "Applied theme:" << themePath;
+        //qDebug() << "Applied theme:" << themePath;
     } else {
-        qDebug() << "Failed to load theme:" << themePath;
+        //qDebug() << "Failed to load theme:" << themePath;
     }
 }
 
